@@ -3,107 +3,207 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Smart Home</title>
+    <title>Smart Home Real-time Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f1f5f9; }
+        .sensor-card { transition: all 0.8s ease; color: white; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .fan-spin { animation: spin 0.8s linear infinite; }
-        @keyframes flow { 0% { transform: translateY(0); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateY(12px); opacity: 0; } }
-        .air-animation span { display: block; animation: flow 1s infinite; }
         .glow-yellow { filter: drop-shadow(0 0 15px rgba(251, 191, 36, 0.7)); }
-        .device-card { cursor: pointer; transition: all 0.3s ease; border: 2px solid transparent; position: relative; }
-        .loading-overlay { position: absolute; inset: 0; background: rgba(255, 255, 255, 0.7); display: none; align-items: center; justify-content: center; border-radius: 40px; z-index: 10; }
+        .device-card { cursor: pointer; transition: all 0.3s ease; position: relative; overflow: hidden; }
         .is-loading .loading-overlay { display: flex; }
-        .loader { width: 30px; height: 30px; border: 3px solid #cbd5e1; border-bottom-color: #2563eb; border-radius: 50%; animation: spin 0.6s linear infinite; }
-        .sidebar-btn.active { background: #2563eb; color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
+        .loading-overlay { position: absolute; inset: 0; background: rgba(255, 255, 255, 0.8); display: none; align-items: center; justify-content: center; z-index: 10; }
+        .loader { width: 25px; height: 25px; border: 3px solid #cbd5e1; border-bottom-color: #2563eb; border-radius: 50%; animation: spin 0.6s linear infinite; }
     </style>
 </head>
 <body class="flex min-h-screen">
     <nav class="w-72 bg-slate-900 h-screen sticky top-0 p-6 flex flex-col text-slate-400">
         <div class="flex items-center gap-3 mb-10 px-2 text-white">
             <div class="p-2 bg-blue-600 rounded-lg"><i class="fas fa-bolt"></i></div>
-            <h2 class="text-xl font-bold tracking-wider">SMART HOME</h2>
+            <h2 class="text-xl font-bold tracking-wider uppercase">Smart Home</h2>
         </div>
-        <div class="space-y-3 flex-grow">
-            <a href="index.html" class="sidebar-btn active flex items-center gap-3 p-4 rounded-xl font-semibold hover:bg-slate-800 transition-all text-white"><i class="fas fa-th-large"></i> Dashboard</a>
-            <a href="sensor.html" class="sidebar-btn flex items-center gap-3 p-4 rounded-xl font-semibold hover:bg-slate-800 transition-all"><i class="fas fa-database"></i> Sensor Data</a>
-            <a href="history.html" class="sidebar-btn flex items-center gap-3 p-4 rounded-xl font-semibold hover:bg-slate-800 transition-all"><i class="fas fa-running"></i> Action History</a>
-            <a href="profile.html" class="sidebar-btn flex items-center gap-3 p-4 rounded-xl font-semibold hover:bg-slate-800 transition-all"><i class="fas fa-user"></i> Profile</a>
+        <div class="space-y-3 flex-grow text-sm uppercase font-bold">
+            <a href="index.html" class="flex p-4 bg-blue-600 text-white rounded-xl font-semibold shadow-lg shadow-blue-900/20 transition-all"><i class="fas fa-th-large mr-3"></i> Dashboard</a>
+            <a href="sensor.html" class="flex p-4 hover:bg-slate-800 rounded-xl font-semibold transition-all"><i class="fas fa-database mr-3"></i> Sensor Data</a>
+            <a href="history.html" class="flex p-4 hover:bg-slate-800 rounded-xl font-semibold transition-all"><i class="fas fa-running mr-3"></i> Action History</a>
+            <a href="profile.html" class="flex p-4 hover:bg-slate-800 rounded-xl font-semibold transition-all"><i class="fas fa-user mr-3"></i> Profile</a>
         </div>
-        <div class="text-[10px] uppercase tracking-widest text-center opacity-50">Designed by Gemini 2026</div>
     </nav>
 
-    <main class="flex-grow p-10 overflow-y-auto">
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold text-slate-800">Bảng điều khiển</h1>
-            <p class="text-slate-500" id="live-clock">Đang tải thời gian...</p>
-        </div>
-
-        <div class="grid grid-cols-3 gap-6 mb-8 text-white">
-            <div id="card-temp" class="p-6 rounded-3xl shadow-lg transition-all duration-700 bg-gradient-to-br from-blue-500 to-indigo-600">
-                <div class="flex justify-between items-start">
-                    <div><p class="text-xs font-bold uppercase opacity-80">Nhiệt độ</p><h3 class="text-4xl font-black mt-2"><span id="val-temp">24</span>°C</h3></div>
-                    <i class="fas fa-thermometer-half text-3xl opacity-30"></i>
-                </div>
+    <main class="flex-grow p-10">
+        <div class="mb-8 flex justify-between items-end">
+            <div>
+                <h1 class="text-3xl font-extrabold text-slate-800">Bảng điều khiển</h1>
+                <p class="text-slate-500 font-medium" id="live-clock">--:--:--</p>
             </div>
-            <div id="card-humi" class="p-6 rounded-3xl shadow-lg transition-all duration-700 bg-gradient-to-br from-cyan-500 to-blue-500">
-                <div class="flex justify-between items-start">
-                    <div><p class="text-xs font-bold uppercase opacity-80">Độ ẩm</p><h3 class="text-4xl font-black mt-2"><span id="val-humi">55</span>%</h3></div>
-                    <i class="fas fa-tint text-3xl opacity-30"></i>
-                </div>
-            </div>
-            <div id="card-light-sensor" class="p-6 rounded-3xl shadow-lg transition-all duration-700 bg-gradient-to-br from-slate-600 to-slate-800">
-                <div class="flex justify-between items-start">
-                    <div><p class="text-xs font-bold uppercase opacity-80">Ánh sáng</p><h3 class="text-4xl font-black mt-2"><span id="val-light">150</span> Lx</h3></div>
-                    <i class="fas fa-sun text-3xl opacity-30"></i>
-                </div>
+            <div id="status-badge" class="px-4 py-2 bg-orange-100 text-orange-700 rounded-full text-xs font-bold flex items-center gap-2">
+                <span class="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span> Connecting...
             </div>
         </div>
 
-        <div class="bg-white p-8 rounded-[32px] shadow-sm border border-slate-200 mb-8"><canvas id="iotChart" height="90"></canvas></div>
+        <div class="grid grid-cols-3 gap-6 mb-8">
+            <div id="card-temp" class="sensor-card p-8 rounded-[2.5rem] shadow-xl flex flex-col justify-between min-h-[180px] bg-slate-400">
+                <div class="flex justify-between items-start"><p class="font-bold uppercase text-xs">Nhiệt độ</p><i class="fas fa-thermometer-half text-2xl opacity-40"></i></div>
+                <h3 class="text-6xl font-black"><span id="val-temp">--</span>°C</h3>
+            </div>
+            <div id="card-humi" class="sensor-card p-8 rounded-[2.5rem] shadow-xl flex flex-col justify-between min-h-[180px] bg-slate-400">
+                <div class="flex justify-between items-start"><p class="font-bold uppercase text-xs">Độ ẩm</p><i class="fas fa-tint text-2xl opacity-40"></i></div>
+                <h3 class="text-6xl font-black"><span id="val-humi">--</span>%</h3>
+            </div>
+            <div id="card-light" class="sensor-card p-8 rounded-[2.5rem] shadow-xl flex flex-col justify-between min-h-[180px] bg-slate-200 text-slate-800">
+                <div class="flex justify-between items-start"><p class="font-bold uppercase text-xs">Ánh sáng</p><i class="fas fa-sun text-2xl opacity-40"></i></div>
+                <h3 class="text-6xl font-black"><span id="val-light">--</span><span class="text-2xl ml-2">Lx</span></h3>
+            </div>
+        </div>
 
-        <div class="grid grid-cols-3 gap-8 text-center">
-            <div onclick="toggleDev('light')" id="dev-light" class="device-card bg-white p-12 rounded-[40px] shadow-sm flex flex-col items-center border border-slate-100">
+        <div class="bg-white p-8 rounded-[3rem] shadow-lg mb-8">
+            <canvas id="iotChart" height="100"></canvas>
+        </div>
+
+        <div class="grid grid-cols-3 gap-8">
+            <div onclick="toggleDev('light')" id="dev-light" class="device-card bg-white p-10 rounded-[3rem] shadow-lg flex flex-col items-center border border-white">
                 <div class="loading-overlay"><span class="loader"></span></div>
-                <i id="icon-light" class="fas fa-lightbulb text-6xl text-slate-200 transition-all duration-500"></i>
-                <h4 class="mt-4 font-bold text-slate-400">ĐÈN</h4>
+                <i id="icon-light" class="fas fa-lightbulb text-6xl text-slate-200"></i>
+                <h4 class="mt-6 font-extrabold text-slate-600 uppercase">ĐÈN LED</h4>
             </div>
-            <div onclick="toggleDev('fan')" id="dev-fan" class="device-card bg-white p-12 rounded-[40px] shadow-sm flex flex-col items-center border border-slate-100">
+            <div onclick="toggleDev('fan')" id="dev-fan" class="device-card bg-white p-10 rounded-[3rem] shadow-lg flex flex-col items-center border border-white">
                 <div class="loading-overlay"><span class="loader"></span></div>
-                <i id="icon-fan" class="fas fa-fan text-6xl text-slate-200 transition-all duration-500"></i>
-                <h4 class="mt-4 font-bold text-slate-400">QUẠT</h4>
+                <i id="icon-fan" class="fas fa-fan text-6xl text-slate-200"></i>
+                <h4 class="mt-6 font-extrabold text-slate-600 uppercase">QUẠT GIÓ</h4>
             </div>
-            <div onclick="toggleDev('ac')" id="dev-ac" class="device-card bg-white p-12 rounded-[40px] shadow-sm flex flex-col items-center border border-slate-100 overflow-hidden relative">
+            <div onclick="toggleDev('ac')" id="dev-ac" class="device-card bg-white p-10 rounded-[3rem] shadow-lg flex flex-col items-center border border-white">
                 <div class="loading-overlay"><span class="loader"></span></div>
-                <i id="icon-ac" class="fas fa-snowflake text-6xl text-slate-200 transition-all duration-500"></i>
-                <div id="air-ac" class="air-animation hidden absolute bottom-12 text-cyan-400 text-xs"><span><i class="fas fa-chevron-down"></i></span></div>
-                <h4 class="mt-4 font-bold text-slate-400">ĐIỀU HÒA</h4>
+                <i id="icon-ac" class="fas fa-snowflake text-6xl text-slate-200"></i>
+                <h4 class="mt-6 font-extrabold text-slate-600 uppercase">ĐIỀU HÒA</h4>
             </div>
         </div>
     </main>
 
     <script>
-        setInterval(() => { document.getElementById('live-clock').innerText = new Date().toLocaleString('vi-VN'); }, 1000);
+        const API_BASE = "http://localhost:3000";
+        const socket = io(API_BASE);
         let devStates = { light: false, fan: false, ac: false };
-        function toggleDev(dev) {
+
+        // Cập nhật đồng hồ
+        setInterval(() => { document.getElementById('live-clock').innerText = new Date().toLocaleString('vi-VN'); }, 1000);
+
+        // Gradient màu sắc
+        function updateGradients(t, h, l) {
+            const tPerc = Math.min(Math.max((t - 10) / 35, 0), 1) * 100;
+            document.getElementById('card-temp').style.background = `linear-gradient(135deg, #f97316, #ef4444 ${tPerc}%)`;
+            const hPerc = Math.min(Math.max((h - 20) / 70, 0), 1) * 100;
+            document.getElementById('card-humi').style.background = `linear-gradient(135deg, #38bdf8, #2563eb ${hPerc}%)`;
+            const lPerc = Math.min(Math.max(l / 1000, 0), 1) * 100;
+            document.getElementById('card-light').style.background = `linear-gradient(135deg, #f1f5f9, #fde047 ${lPerc}%)`;
+        }
+
+        // Khởi tạo Chart
+        const ctx = document.getElementById('iotChart').getContext('2d');
+        const iotChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    { label: 'Nhiệt độ (°C)', data: [], borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', tension: 0.4, yAxisID: 'y', fill: true },
+                    { label: 'Độ ẩm (%)', data: [], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', tension: 0.4, yAxisID: 'y', fill: true },
+                    { label: 'Ánh sáng (Lx)', data: [], borderColor: '#fbbf24', backgroundColor: 'rgba(251, 191, 36, 0.1)', tension: 0.4, yAxisID: 'y1', fill: true }
+                ]
+            },
+            options: { scales: { y: { position: 'left' }, y1: { position: 'right', grid: { drawOnChartArea: false } } } }
+        });
+
+        // BƯỚC 1: GỌI API LẤY DỮ LIỆU CŨ KHI LOAD TRANG
+        async function loadInitialData() {
+            try {
+                const res = await fetch(`${API_BASE}/api/sensors?range=30days`);
+                const result = await res.json();
+                const list = result.data;
+
+                if (list && list.length > 0) {
+                    // Lấy giá trị mới nhất cho các Card
+                    const t = list.find(s => s.SensorName === 'Temperature')?.Value || 0;
+                    const h = list.find(s => s.SensorName === 'Humidity')?.Value || 0;
+                    const l = list.find(s => s.SensorName === 'Light')?.Value || 0;
+                    
+                    document.getElementById('val-temp').innerText = t;
+                    document.getElementById('val-humi').innerText = h;
+                    document.getElementById('val-light').innerText = l;
+                    updateGradients(t, h, l);
+
+                    // Lấy 10 điểm dữ liệu cũ cho biểu đồ (reverse để thời gian chạy từ trái qua phải)
+                    const filter = (name) => list.filter(s => s.SensorName === name).slice(0, 10).reverse();
+                    const temps = filter('Temperature');
+                    const humis = filter('Humidity');
+                    const lights = filter('Light');
+
+                    iotChart.data.labels = temps.map(d => new Date(d.CreateAt).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'}));
+                    iotChart.data.datasets[0].data = temps.map(d => d.Value);
+                    iotChart.data.datasets[1].data = humis.map(d => d.Value);
+                    iotChart.data.datasets[2].data = lights.map(d => d.Value);
+                    iotChart.update();
+                }
+            } catch (e) { console.error("API Error:", e); }
+        }
+
+        // BƯỚC 2: LẮNG NGHE SOCKET CHO DỮ LIỆU THỜI GIAN THỰC
+        socket.on('connect', () => {
+            const badge = document.getElementById('status-badge');
+            badge.className = "px-4 py-2 bg-green-100 text-green-700 rounded-full text-xs font-bold flex items-center gap-2";
+            badge.innerHTML = `<span class="w-2 h-2 bg-green-500 rounded-full animate-ping"></span> Real-time Live`;
+        });
+
+        socket.on('updateSensor', (data) => {
+            // Cập nhật text & gradient
+            document.getElementById('val-temp').innerText = data.temp;
+            document.getElementById('val-humi').innerText = data.humi;
+            document.getElementById('val-light').innerText = data.light;
+            updateGradients(data.temp, data.humi, data.light);
+
+            // Cập nhật biểu đồ (thêm 1 điểm mới)
+            const time = new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+            iotChart.data.labels.push(time);
+            iotChart.data.datasets[0].data.push(data.temp);
+            iotChart.data.datasets[1].data.push(data.humi);
+            iotChart.data.datasets[2].data.push(data.light);
+
+            if(iotChart.data.labels.length > 15) {
+                iotChart.data.labels.shift();
+                iotChart.data.datasets.forEach(ds => ds.data.shift());
+            }
+            iotChart.update('none');
+        });
+
+        // BƯỚC 3: ĐIỀU KHIỂN
+        async function toggleDev(dev) {
             const card = document.getElementById(`dev-${dev}`);
             card.classList.add('is-loading');
-            setTimeout(() => {
-                card.classList.remove('is-loading');
-                devStates[dev] = !devStates[dev];
-                const active = devStates[dev];
-                const icon = document.getElementById(`icon-${dev}`);
-                if(dev==='light'){ icon.className = active ? 'fas fa-lightbulb text-6xl text-yellow-400 glow-yellow' : 'fas fa-lightbulb text-6xl text-slate-200'; card.style.backgroundColor = active ? '#fffbeb' : '#ffffff'; }
-                if(dev==='fan'){ icon.className = active ? 'fas fa-fan text-6xl text-blue-500 fan-spin' : 'fas fa-fan text-6xl text-slate-200'; card.style.backgroundColor = active ? '#eff6ff' : '#ffffff'; }
-                if(dev==='ac'){ icon.className = active ? 'fas fa-snowflake text-6xl text-cyan-400' : 'fas fa-snowflake text-6xl text-slate-200'; card.style.backgroundColor = active ? '#ecfeff' : '#ffffff'; active ? document.getElementById('air-ac').classList.remove('hidden') : document.getElementById('air-ac').classList.add('hidden'); }
-            }, 1000);
+            const action = !devStates[dev] ? "ON" : "OFF";
+            try {
+                const res = await fetch(`${API_BASE}/api/sensors/control`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ deviceName: dev, action: action })
+                });
+                if (res.ok) {
+                    devStates[dev] = !devStates[dev];
+                    const active = devStates[dev];
+                    const icon = document.getElementById(`icon-${dev}`);
+                    if(dev==='light') icon.className = active ? 'fas fa-lightbulb text-6xl text-yellow-400 glow-yellow' : 'fas fa-lightbulb text-6xl text-slate-200';
+                    if(dev==='fan') icon.className = active ? 'fas fa-fan text-6xl text-blue-500 fan-spin' : 'fas fa-fan text-6xl text-slate-200';
+                    if(dev==='ac') icon.className = active ? 'fas fa-snowflake text-6xl text-cyan-400' : 'fas fa-snowflake text-6xl text-slate-200';
+                    card.style.backgroundColor = active ? '#f8fafc' : '#ffffff';
+                }
+            } catch (e) { alert("Server Error"); }
+            finally { card.classList.remove('is-loading'); }
         }
-        const ctx = document.getElementById('iotChart').getContext('2d');
-        new Chart(ctx, { type: 'line', data: { labels: ['08:00', '10:00', '12:00', '14:00'], datasets: [{ label: 'Nhiệt độ', data: [22, 28, 32, 29], borderColor: '#f97316', tension: 0.4 }] } });
+
+        // Chạy khởi tạo
+        loadInitialData();
     </script>
 </body>
 </html>

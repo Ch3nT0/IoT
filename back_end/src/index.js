@@ -8,6 +8,14 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+const http = require('http');
+const { Server } = require('socket.io');
+const cors = require('cors');
+app.use(cors());
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: { origin: "*" } // Cho phép FE truy cập
+});
 
 // Sử dụng Routes
 app.use('/api/sensors', sensorRoutes);
@@ -31,6 +39,9 @@ mqttClient.on('message', async (topic, message) => {
 
                 await Promise.all(queries);
                 console.log(`Đã lưu dữ liệu: Temp: ${temp}, Humi: ${humi}, Light: ${light}`);
+
+                io.emit('updateSensor', data); 
+                console.log("Đã đẩy data qua Websocket:", data);
             } else {
                 console.warn("Nhận dữ liệu thiếu trường, không lưu vào DB:", data);
             }
@@ -41,6 +52,6 @@ mqttClient.on('message', async (topic, message) => {
     }
 });
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`BE đang chạy tại http://localhost:${PORT}`);
 });
