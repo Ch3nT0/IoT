@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Smart Home</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f1f5f9; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .fan-spin { animation: spin 0.8s linear infinite; }
+        @keyframes flow { 0% { transform: translateY(0); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateY(12px); opacity: 0; } }
+        .air-animation span { display: block; animation: flow 1s infinite; }
+        .glow-yellow { filter: drop-shadow(0 0 15px rgba(251, 191, 36, 0.7)); }
+        .device-card { cursor: pointer; transition: all 0.3s ease; border: 2px solid transparent; position: relative; }
+        .loading-overlay { position: absolute; inset: 0; background: rgba(255, 255, 255, 0.7); display: none; align-items: center; justify-content: center; border-radius: 40px; z-index: 10; }
+        .is-loading .loading-overlay { display: flex; }
+        .loader { width: 30px; height: 30px; border: 3px solid #cbd5e1; border-bottom-color: #2563eb; border-radius: 50%; animation: spin 0.6s linear infinite; }
+        .sidebar-btn.active { background: #2563eb; color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
+    </style>
+</head>
+<body class="flex min-h-screen">
+    <nav class="w-72 bg-slate-900 h-screen sticky top-0 p-6 flex flex-col text-slate-400">
+        <div class="flex items-center gap-3 mb-10 px-2 text-white">
+            <div class="p-2 bg-blue-600 rounded-lg"><i class="fas fa-bolt"></i></div>
+            <h2 class="text-xl font-bold tracking-wider">SMART HOME</h2>
+        </div>
+        <div class="space-y-3 flex-grow">
+            <a href="index.html" class="sidebar-btn active flex items-center gap-3 p-4 rounded-xl font-semibold hover:bg-slate-800 transition-all text-white"><i class="fas fa-th-large"></i> Dashboard</a>
+            <a href="sensor.html" class="sidebar-btn flex items-center gap-3 p-4 rounded-xl font-semibold hover:bg-slate-800 transition-all"><i class="fas fa-database"></i> Sensor Data</a>
+            <a href="history.html" class="sidebar-btn flex items-center gap-3 p-4 rounded-xl font-semibold hover:bg-slate-800 transition-all"><i class="fas fa-running"></i> Action History</a>
+            <a href="profile.html" class="sidebar-btn flex items-center gap-3 p-4 rounded-xl font-semibold hover:bg-slate-800 transition-all"><i class="fas fa-user"></i> Profile</a>
+        </div>
+        <div class="text-[10px] uppercase tracking-widest text-center opacity-50">Designed by Gemini 2026</div>
+    </nav>
+
+    <main class="flex-grow p-10 overflow-y-auto">
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-slate-800">Bảng điều khiển</h1>
+            <p class="text-slate-500" id="live-clock">Đang tải thời gian...</p>
+        </div>
+
+        <div class="grid grid-cols-3 gap-6 mb-8 text-white">
+            <div id="card-temp" class="p-6 rounded-3xl shadow-lg transition-all duration-700 bg-gradient-to-br from-blue-500 to-indigo-600">
+                <div class="flex justify-between items-start">
+                    <div><p class="text-xs font-bold uppercase opacity-80">Nhiệt độ</p><h3 class="text-4xl font-black mt-2"><span id="val-temp">24</span>°C</h3></div>
+                    <i class="fas fa-thermometer-half text-3xl opacity-30"></i>
+                </div>
+            </div>
+            <div id="card-humi" class="p-6 rounded-3xl shadow-lg transition-all duration-700 bg-gradient-to-br from-cyan-500 to-blue-500">
+                <div class="flex justify-between items-start">
+                    <div><p class="text-xs font-bold uppercase opacity-80">Độ ẩm</p><h3 class="text-4xl font-black mt-2"><span id="val-humi">55</span>%</h3></div>
+                    <i class="fas fa-tint text-3xl opacity-30"></i>
+                </div>
+            </div>
+            <div id="card-light-sensor" class="p-6 rounded-3xl shadow-lg transition-all duration-700 bg-gradient-to-br from-slate-600 to-slate-800">
+                <div class="flex justify-between items-start">
+                    <div><p class="text-xs font-bold uppercase opacity-80">Ánh sáng</p><h3 class="text-4xl font-black mt-2"><span id="val-light">150</span> Lx</h3></div>
+                    <i class="fas fa-sun text-3xl opacity-30"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-8 rounded-[32px] shadow-sm border border-slate-200 mb-8"><canvas id="iotChart" height="90"></canvas></div>
+
+        <div class="grid grid-cols-3 gap-8 text-center">
+            <div onclick="toggleDev('light')" id="dev-light" class="device-card bg-white p-12 rounded-[40px] shadow-sm flex flex-col items-center border border-slate-100">
+                <div class="loading-overlay"><span class="loader"></span></div>
+                <i id="icon-light" class="fas fa-lightbulb text-6xl text-slate-200 transition-all duration-500"></i>
+                <h4 class="mt-4 font-bold text-slate-400">ĐÈN</h4>
+            </div>
+            <div onclick="toggleDev('fan')" id="dev-fan" class="device-card bg-white p-12 rounded-[40px] shadow-sm flex flex-col items-center border border-slate-100">
+                <div class="loading-overlay"><span class="loader"></span></div>
+                <i id="icon-fan" class="fas fa-fan text-6xl text-slate-200 transition-all duration-500"></i>
+                <h4 class="mt-4 font-bold text-slate-400">QUẠT</h4>
+            </div>
+            <div onclick="toggleDev('ac')" id="dev-ac" class="device-card bg-white p-12 rounded-[40px] shadow-sm flex flex-col items-center border border-slate-100 overflow-hidden relative">
+                <div class="loading-overlay"><span class="loader"></span></div>
+                <i id="icon-ac" class="fas fa-snowflake text-6xl text-slate-200 transition-all duration-500"></i>
+                <div id="air-ac" class="air-animation hidden absolute bottom-12 text-cyan-400 text-xs"><span><i class="fas fa-chevron-down"></i></span></div>
+                <h4 class="mt-4 font-bold text-slate-400">ĐIỀU HÒA</h4>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        setInterval(() => { document.getElementById('live-clock').innerText = new Date().toLocaleString('vi-VN'); }, 1000);
+        let devStates = { light: false, fan: false, ac: false };
+        function toggleDev(dev) {
+            const card = document.getElementById(`dev-${dev}`);
+            card.classList.add('is-loading');
+            setTimeout(() => {
+                card.classList.remove('is-loading');
+                devStates[dev] = !devStates[dev];
+                const active = devStates[dev];
+                const icon = document.getElementById(`icon-${dev}`);
+                if(dev==='light'){ icon.className = active ? 'fas fa-lightbulb text-6xl text-yellow-400 glow-yellow' : 'fas fa-lightbulb text-6xl text-slate-200'; card.style.backgroundColor = active ? '#fffbeb' : '#ffffff'; }
+                if(dev==='fan'){ icon.className = active ? 'fas fa-fan text-6xl text-blue-500 fan-spin' : 'fas fa-fan text-6xl text-slate-200'; card.style.backgroundColor = active ? '#eff6ff' : '#ffffff'; }
+                if(dev==='ac'){ icon.className = active ? 'fas fa-snowflake text-6xl text-cyan-400' : 'fas fa-snowflake text-6xl text-slate-200'; card.style.backgroundColor = active ? '#ecfeff' : '#ffffff'; active ? document.getElementById('air-ac').classList.remove('hidden') : document.getElementById('air-ac').classList.add('hidden'); }
+            }, 1000);
+        }
+        const ctx = document.getElementById('iotChart').getContext('2d');
+        new Chart(ctx, { type: 'line', data: { labels: ['08:00', '10:00', '12:00', '14:00'], datasets: [{ label: 'Nhiệt độ', data: [22, 28, 32, 29], borderColor: '#f97316', tension: 0.4 }] } });
+    </script>
+</body>
+</html>

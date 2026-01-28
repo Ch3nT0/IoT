@@ -1,62 +1,46 @@
+require('dotenv').config();
 const express = require('express');
-const mqtt = require('mqtt');
-const mysql = require('mysql2');
+const sensorRoutes = require('./routes/sensorRoutes');
+const mqttClient = require('./config/mqtt');
+const db = require('./config/db');
 
 const app = express();
-const port = 3000;
+const PORT = process.env.PORT || 3000;
 
-// 1. Kết nối MySQL
-const db = mysql.createPool({
-    host: 'localhost',
-    user: 'root',
-    password: 'chencode24',
-    database: 'iot_db'
-});
+app.use(express.json());
 
-// 2. Kết nối MQTT Broker
-const mqttClient = mqtt.connect('mqtt://localhost:1883', {
-    username: 'manh',
-    password: '14112004'
-});
+// Sử dụng Routes
+app.use('/api/sensors', sensorRoutes);
 
-mqttClient.on('connect', () => {
-    console.log('Connected to MQTT Broker');
-    mqttClient.subscribe('dataSensor');
-});
+mqttClient.on('message', async (topic, message) => {
+    if (topic === process.env.MQTT_TOPIC) {
+        try {
+            const payload = message.toString();
+            if (!payload || payload === "") return; // Bỏ qua tin nhắn rỗng
 
-// Lắng nghe dữ liệu từ ESP8266 gửi lên
-mqttClient.on('message', (topic, message) => {
-    if (topic === 'dataSensor') {
-        const data = JSON.parse(message.toString());
+            const data = JSON.parse(payload);
+            const { temp, humi, light } = data;
 
-        // Lưu Nhiệt độ (ID 1), Độ ẩm (ID 2), Ánh sáng (ID 3)
-        const sensorValues = [
-            [data.temp, 1],
-            [data.humi, 2],
-            [data.light, 3]
-        ];
+            // KIỂM TRA: Chỉ lưu nếu tất cả giá trị đều hợp lệ (không undefined/null)
+            if (temp !== undefined && humi !== undefined && light !== undefined) {
+                const queries = [
+                    db.query("INSERT INTO DataSensor (Value, SensorID) VALUES (?, 1)", [temp]),
+                    db.query("INSERT INTO DataSensor (Value, SensorID) VALUES (?, 2)", [humi]),
+                    db.query("INSERT INTO DataSensor (Value, SensorID) VALUES (?, 3)", [light])
+                ];
 
-        sensorValues.forEach(val => {
-            db.query("INSERT INTO DataSensor (Value, SensorID) VALUES (?, ?)", val);
-        });
-        console.log("Data saved to MySQL");
+                await Promise.all(queries);
+                console.log(`Đã lưu dữ liệu: Temp: ${temp}, Humi: ${humi}, Light: ${light}`);
+            } else {
+                console.warn("Nhận dữ liệu thiếu trường, không lưu vào DB:", data);
+            }
+
+        } catch (err) {
+            console.error("Lỗi định dạng JSON hoặc xử lý MQTT:", err.message);
+        }
     }
 });
 
-// 3. Tạo API Endpoint để lấy dữ liệu cho Frontend sau này
-app.get('/api/sensors', (req, res) => {
-    const sql = `
-        SELECT ds.Value, s.Name, ds.CreateAt 
-        FROM DataSensor ds 
-        JOIN Sensor s ON ds.SensorID = s.ID 
-        ORDER BY ds.CreateAt DESC LIMIT 20
-    `;
-    db.query(sql, (err, results) => {
-        if (err) return res.status(500).json(err);
-        res.json(results);
-    });
-});
-
-app.listen(port, () => {
-    console.log(`Server BE đang chạy tại http://localhost:${port}`);
+app.listen(PORT, () => {
+    console.log(`BE đang chạy tại http://localhost:${PORT}`);
 });

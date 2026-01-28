@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Action History - Smart Home</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@500&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f1f5f9; }
+        .sidebar-btn.active { background: #2563eb; color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .table-container { height: calc(100vh - 350px); overflow-y: auto; }
+        th { cursor: pointer; position: sticky; top: 0; background: white; z-index: 10; transition: all 0.2s; }
+        th:hover { color: #2563eb; background-color: #f8fafc; }
+        tr { transition: all 0.2s ease; }
+        .table-container::-webkit-scrollbar { width: 6px; }
+        .table-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<body class="flex min-h-screen">
+
+    <nav class="w-72 bg-slate-900 h-screen sticky top-0 p-6 flex flex-col text-slate-400">
+        <div class="flex items-center gap-3 mb-10 px-2 text-white">
+            <div class="p-2 bg-blue-600 rounded-lg"><i class="fas fa-bolt"></i></div>
+            <h2 class="text-xl font-bold uppercase tracking-tighter">Smart Home</h2>
+        </div>
+        <div class="space-y-3 flex-grow">
+            <a href="index.html" class="flex items-center gap-3 p-4 rounded-xl font-semibold hover:bg-slate-800 transition-all"><i class="fas fa-th-large"></i> Dashboard</a>
+            <a href="sensor.html" class="flex items-center gap-3 p-4 rounded-xl font-semibold hover:bg-slate-800 transition-all"><i class="fas fa-database"></i> Sensor Data</a>
+            <a href="history.html" class="sidebar-btn active flex items-center gap-3 p-4 rounded-xl font-semibold transition-all"><i class="fas fa-running"></i> Action History</a>
+            <a href="profile.html" class="flex items-center gap-3 p-4 rounded-xl font-semibold hover:bg-slate-800 transition-all"><i class="fas fa-user"></i> Profile</a>
+        </div>
+        <div class="text-[10px] uppercase tracking-widest text-center opacity-30 italic">IOT System v2.0</div>
+    </nav>
+
+    <main class="flex-grow p-10 flex flex-col">
+        <div class="mb-6">
+            <h2 class="text-3xl font-extrabold text-slate-800 tracking-tight">Lịch sử thiết bị</h2>
+            <p class="text-slate-400 text-sm mt-1 uppercase font-bold tracking-widest text-[10px]">Nhật ký điều khiển hệ thống chi tiết</p>
+        </div>
+
+        <div class="bg-white rounded-[40px] shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+            
+            <div class="p-8 bg-slate-50 border-b">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
+                    
+                    <div class="lg:col-span-3 space-y-2">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tìm kiếm nhanh</label>
+                        <div class="relative">
+                            <i class="fas fa-search absolute left-4 top-3.5 text-slate-300"></i>
+                            <input type="text" id="searchInp" onkeyup="filterData()" placeholder="ID hoặc Hành động..." class="w-full pl-11 pr-4 py-3 rounded-2xl border bg-white outline-none focus:ring-2 ring-blue-500 transition-all text-sm font-semibold">
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-2 space-y-2">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Thiết bị</label>
+                        <select id="deviceTypeFilter" onchange="filterData()" class="w-full px-4 py-3 rounded-2xl border bg-white outline-none focus:ring-2 ring-blue-500 transition-all text-sm font-bold text-slate-600">
+                            <option value="">Tất cả</option>
+                            <option value="Đèn">Đèn</option>
+                            <option value="Quạt">Quạt</option>
+                            <option value="Điều hòa">Điều hòa</option>
+                        </select>
+                    </div>
+
+                    <div class="lg:col-span-5 space-y-2">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Khoảng thời gian (đến giây)</label>
+                        <div class="flex items-center gap-2">
+                            <input type="datetime-local" id="timeStart" step="1" onchange="filterData()" class="w-full px-3 py-3 rounded-2xl border bg-white focus:ring-2 ring-blue-500 outline-none transition-all font-mono text-[10px] uppercase">
+                            <span class="text-slate-300 font-bold">→</span>
+                            <input type="datetime-local" id="timeEnd" step="1" onchange="filterData()" class="w-full px-3 py-3 rounded-2xl border bg-white focus:ring-2 ring-blue-500 outline-none transition-all font-mono text-[10px] uppercase">
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-2">
+                        <button onclick="resetFilters()" class="w-full h-[46px] bg-slate-200 text-slate-600 rounded-2xl font-black hover:bg-red-50 hover:text-red-600 transition-all text-[10px] uppercase tracking-widest">
+                            Xóa lọc
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="w-full text-left" id="historyTable">
+                    <thead>
+                        <tr class="text-[10px] text-slate-400 font-black uppercase tracking-widest border-b">
+                            <th class="p-6" onclick="sortTable(0)">ID <i class="fas fa-sort ml-1 opacity-20"></i></th>
+                            <th class="p-6" onclick="sortTable(1)">Thiết bị <i class="fas fa-sort ml-1 opacity-20"></i></th>
+                            <th class="p-6" onclick="sortTable(2)">Hành động <i class="fas fa-sort ml-1 opacity-20"></i></th>
+                            <th class="p-6 text-right" onclick="sortTable(3)">Thời gian (H:M:S) <i class="fas fa-sort ml-1 opacity-20"></i></th>
+                            <th class="p-6 text-right">Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50 text-sm font-bold text-slate-600">
+                        <tr class="hover:bg-blue-50/40 group">
+                            <td class="p-6 text-slate-300 font-mono">#101</td>
+                            <td class="p-6 text-slate-800">Quạt</td>
+                            <td class="p-6"><span class="text-blue-600 font-black uppercase text-xs italic tracking-widest">Bật</span></td>
+                            <td class="p-6 text-right font-mono text-slate-400 group-hover:text-blue-600 tracking-tighter italic">2026-01-14 20:15:22</td>
+                            <td class="p-6 text-right text-green-500 font-bold tracking-tight">Thành công</td>
+                        </tr>
+                        <tr class="hover:bg-blue-50/40 group">
+                            <td class="p-6 text-slate-300 font-mono">#102</td>
+                            <td class="p-6 text-slate-800">Đèn</td>
+                            <td class="p-6"><span class="text-red-500 font-black uppercase text-xs italic tracking-widest">Tắt</span></td>
+                            <td class="p-6 text-right font-mono text-slate-400 group-hover:text-blue-600 tracking-tighter italic">2026-01-14 20:10:05</td>
+                            <td class="p-6 text-right text-green-500 font-bold tracking-tight">Thành công</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="p-6 bg-slate-50 border-t flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                    Hiển thị <span class="text-slate-900">1 - 10</span> / 50 bản ghi
+                </div>
+
+                <div class="flex items-center gap-1">
+                    <button class="w-10 h-10 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-blue-600 transition-all shadow-sm">
+                        <i class="fas fa-angle-double-left text-xs"></i>
+                    </button>
+                    <button class="px-4 h-10 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 font-bold text-[10px] uppercase tracking-wider hover:text-blue-600 transition-all shadow-sm mr-2">
+                        Trước
+                    </button>
+                    <div class="flex gap-1 items-center">
+                        <button class="w-10 h-10 rounded-xl bg-blue-600 text-white font-black text-sm shadow-lg shadow-blue-200">1</button>
+                        <button class="w-10 h-10 rounded-xl bg-white border border-slate-100 text-slate-400 font-bold text-sm hover:text-blue-600 transition-all">2</button>
+                    </div>
+                    <button class="px-4 h-10 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 font-bold text-[10px] uppercase tracking-wider hover:text-blue-600 transition-all shadow-sm ml-2">
+                        Sau
+                    </button>
+                    <button class="w-10 h-10 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-blue-600 transition-all shadow-sm">
+                        <i class="fas fa-angle-double-right text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function filterData() {
+            const searchVal = document.getElementById("searchInp").value.toUpperCase();
+            const deviceTypeVal = document.getElementById("deviceTypeFilter").value;
+            const tStart = document.getElementById("timeStart").value.replace("T", " ");
+            const tEnd = document.getElementById("timeEnd").value.replace("T", " ");
+            
+            const table = document.getElementById("historyTable");
+            const tr = table.getElementsByTagName("tr");
+
+            for (let i = 1; i < tr.length; i++) {
+                const tdID = tr[i].getElementsByTagName("td")[0].innerText.toUpperCase();
+                const tdDevice = tr[i].getElementsByTagName("td")[1].innerText;
+                const tdAction = tr[i].getElementsByTagName("td")[2].innerText.toUpperCase();
+                const tdTime = tr[i].getElementsByTagName("td")[3].innerText;
+
+                let matchSearch = (tdID.includes(searchVal) || tdAction.includes(searchVal));
+                let matchType = (deviceTypeVal === "" || tdDevice === deviceTypeVal);
+                let matchTime = true;
+
+                if (tStart !== "" && tdTime < tStart) matchTime = false;
+                if (tEnd !== "" && tdTime > tEnd) matchTime = false;
+
+                tr[i].style.display = (matchSearch && matchType && matchTime) ? "" : "none";
+            }
+        }
+
+        function sortTable(n) {
+            const table = document.getElementById("historyTable");
+            let rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+            switching = true;
+            dir = "asc";
+            while (switching) {
+                switching = false;
+                rows = table.rows;
+                for (i = 1; i < (rows.length - 1); i++) {
+                    shouldSwitch = false;
+                    x = rows[i].getElementsByTagName("TD")[n];
+                    y = rows[i + 1].getElementsByTagName("TD")[n];
+                    if (dir === "asc") {
+                        if (x.innerText.toLowerCase() > y.innerText.toLowerCase()) { shouldSwitch = true; break; }
+                    } else if (dir === "desc") {
+                        if (x.innerText.toLowerCase() < y.innerText.toLowerCase()) { shouldSwitch = true; break; }
+                    }
+                }
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    switchcount++;
+                } else {
+                    if (switchcount === 0 && dir === "asc") { dir = "desc"; switching = true; }
+                }
+            }
+        }
+
+        function resetFilters() {
+            document.getElementById("searchInp").value = "";
+            document.getElementById("deviceTypeFilter").value = "";
+            document.getElementById("timeStart").value = "";
+            document.getElementById("timeEnd").value = "";
+            filterData();
+        }
+    </script>
+</body>
+</html>
