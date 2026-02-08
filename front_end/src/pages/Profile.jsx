@@ -39,7 +39,7 @@ const Profile = () => {
         {/* Avatar Section */}
         <div className="relative w-36 h-36 mx-auto mb-8">
           <img 
-            src="https://ui-avatars.com/api/?name=Le+Doan+Manh&background=2563eb&color=fff" 
+            src="https://res.cloudinary.com/dxadiqrwd/image/upload/v1765972400/lg3ngde5eahuynns8cnk.png" 
             alt="User Avatar"
             className="w-full h-full rounded-full border-8 border-slate-50 shadow-inner object-cover"
           />

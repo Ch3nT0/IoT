@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const sensorRoutes = require('./routes/sensorRoutes');
+const deviceRoutes = require('./routes/deviceRoutes');
 const mqttClient = require('./config/mqtt');
 const db = require('./config/db');
 
@@ -19,6 +20,7 @@ const io = new Server(server, {
 
 // Sử dụng Routes
 app.use('/api/sensors', sensorRoutes);
+app.use('/api/devices', deviceRoutes);
 
 mqttClient.on('message', async (topic, message) => {
     if (topic === process.env.MQTT_TOPIC) {

@@ -50,7 +50,7 @@ const Dashboard = () => {
 
     const fetchInitialData = async () => {
         try {
-            const result = await iotService.getSensorHistory('30days');
+            const result = await iotService.getAllSensors({range: '30days'});
             console.log(result);
             const list = result.data || [];
             if (list.length > 0) {
@@ -133,9 +133,9 @@ const Dashboard = () => {
 
             {/* Device Buttons: Thu gọn kích thước */}
             <div className="grid grid-cols-3 gap-4 h-32">
-                <DeviceButton name="ĐÈN LED" iconClass="fas fa-lightbulb" active={devices.light} loading={loadingDevice === 'light'} activeClass="text-yellow-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.7)]" onClick={() => toggleDev('light')} />
-                <DeviceButton name="QUẠT GIÓ" iconClass="fas fa-fan" active={devices.fan} loading={loadingDevice === 'fan'} activeClass="text-blue-500 animate-spin" onClick={() => toggleDev('fan')} />
-                <DeviceButton name="ĐIỀU HÒA" iconClass="fas fa-snowflake" active={devices.ac} loading={loadingDevice === 'ac'} activeClass="text-cyan-400" onClick={() => toggleDev('ac')} />
+                <DeviceButton name="Light" iconClass="fas fa-lightbulb" active={devices.light} loading={loadingDevice === 'light'} activeClass="text-yellow-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.7)]" onClick={() => toggleDev('light')} />
+                <DeviceButton name="Fan" iconClass="fas fa-fan" active={devices.fan} loading={loadingDevice === 'fan'} activeClass="text-blue-500 animate-spin" onClick={() => toggleDev('fan')} />
+                <DeviceButton name="Air Conditioner" iconClass="fas fa-snowflake" active={devices.ac} loading={loadingDevice === 'ac'} activeClass="text-cyan-400" onClick={() => toggleDev('ac')} />
             </div>
         </main>
     );

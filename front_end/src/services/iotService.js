@@ -26,16 +26,17 @@ export const iotService = {
     },
 
     // 2. Lấy lịch sử điều khiển thiết bị
-    getActionHistory: async (page = 1, limit = 10, search = '', device = '') => {
+    getActionHistory: async (page = 1, limit = 10, search = '', deviceId = '', status = '') => {
         try {
             const query = new URLSearchParams({ 
                 page, 
                 limit, 
                 ...(search && { search }), 
-                ...(device && { device }) 
+                ...(deviceId && { deviceId }) ,
+                ...(status && { status })
             }).toString();
-            
-            const res = await fetch(`${API_BASE}/api/history?${query}`);
+            console.log(query);
+            const res = await fetch(`${API_BASE}/api/devices?${query}`);
             if (!res.ok) throw new Error("Lỗi tải lịch sử");
             return await res.json();
         } catch (error) {

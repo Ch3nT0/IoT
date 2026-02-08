@@ -1,5 +1,7 @@
 const db = require('../config/db');
 
+
+// [GET] /api/sensors?range=30days&search=&sensor=&limit=&page=
 exports.getAllData = async (req, res) => {
     try {
         const { range, search, sensor, limit, page } = req.query;
@@ -50,16 +52,17 @@ exports.getAllData = async (req, res) => {
 
         const [rows] = await db.query(sql, queryParams);
 
-        // Lấy tổng số bản ghi (chỉ cần khi có phân trang)
+        // Lấy tổng số bản ghi
         let total = 0;
         if (limit && page) {
             const [totalRows] = await db.query(`SELECT COUNT(*) as total FROM DataSensor`);
             total = totalRows[0].total;
         }
-
+        const totalPages = limit && page ? Math.ceil(total / parseInt(limit)) : 1;
         res.status(200).json({
             total: total || rows.length,
             count: rows.length,
+            totalPages,
             data: rows
         });
     } catch (error) {
