@@ -1,8 +1,8 @@
 const db = require('../config/db');
 const mqttClient = require('../config/mqtt')
-const { io } = require('../index');
+const { getIO } = require('../socket');
 const timers = global.deviceTimers || {};
-
+const io = getIO();
 // [GET] /api/devices?search=&deviceId=&status=&limit=&page=
 exports.getAllData = async (req, res) => {
     try {

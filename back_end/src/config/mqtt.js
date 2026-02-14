@@ -57,6 +57,7 @@ mqttClient.on('message', async (topic, message) => {
 
         // 2. Xử lý xác nhận từ Hardware (Topic: device/confirm)
         else if (topic === 'device/confirm') {
+            
             const { DeviceID } = data;
             const [rows] = await db.query(
                 "SELECT ID FROM ActionHistory WHERE DeviceID = ? AND Status = 'Processing' ORDER BY CreateAt DESC LIMIT 1",

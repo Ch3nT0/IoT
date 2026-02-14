@@ -32,7 +32,6 @@ const ActionHistory = () => {
         setLoading(false);
     };
 
-    // Hàm này phải nằm ở đây để quản lý state của trang ActionHistory
     const handlePageChange = (newPage) => {
         setPagination(prev => ({ ...prev, page: newPage }));
     };
@@ -52,16 +51,28 @@ const ActionHistory = () => {
         }
     };
 
+    const formatDateTime = (dateString) => {
+        if (!dateString) return "--";
+        const date = new Date(dateString);
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+    };
+
     return (
         <main className="h-screen flex flex-col p-6 overflow-hidden bg-slate-50 gap-4">
-            {/* Header & Filter giữ nguyên như SensorData */}
+            {/* Header & Filter */}
             <header className="flex justify-between items-center h-12">
                 <div>
                     <h1 className="text-2xl font-black text-slate-800 tracking-tight">Lịch sử thiết bị</h1>
                     <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Nhật ký hệ thống</p>
                 </div>
+                {/* Nút làm mới nhanh */}
+                <button onClick={fetchHistory} className="p-2 px-4 bg-white border border-slate-200 rounded-xl text-[10px] font-black hover:bg-slate-50 transition-all">
+                    <i className={`fas fa-sync-alt ${loading ? 'animate-spin' : ''} mr-2`}></i> LÀM MỚI
+                </button>
             </header>
 
+            {/* Bộ lọc Filters */}
             <div className="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-100">
                 <div className="grid grid-cols-12 gap-4 items-end">
                     <div className="col-span-4 space-y-1">
@@ -69,13 +80,12 @@ const ActionHistory = () => {
                         <input
                             type="text" id="searchTime" value={filters.searchTime} onChange={handleFilterChange}
                             onKeyDown={(e) => e.key === 'Enter' && fetchHistory()}
-                            placeholder="YYYY-MM-DD..."
+                            placeholder="2026-02-14..."
                             className="w-full px-4 py-2.5 rounded-2xl border bg-slate-50 outline-none focus:ring-2 ring-blue-500 text-xs font-semibold"
                         />
                     </div>
-                    {/* ... Các Select Device và Status khác ... */}
                     <div className="col-span-3">
-                        <select id="device" value={filters.device} onChange={handleFilterChange} className="w-full px-4 py-2.5 rounded-2xl border bg-slate-50 text-xs font-bold">
+                        <select id="device" value={filters.device} onChange={handleFilterChange} className="w-full px-4 py-2.5 rounded-2xl border bg-slate-50 text-xs font-bold outline-none focus:ring-2 ring-blue-500">
                             <option value="">Tất cả thiết bị</option>
                             <option value="1">Light</option>
                             <option value="2">Fan</option>
@@ -83,7 +93,7 @@ const ActionHistory = () => {
                         </select>
                     </div>
                     <div className="col-span-3">
-                        <select id="status" value={filters.status} onChange={handleFilterChange} className="w-full px-4 py-2.5 rounded-2xl border bg-slate-50 text-xs font-bold">
+                        <select id="status" value={filters.status} onChange={handleFilterChange} className="w-full px-4 py-2.5 rounded-2xl border bg-slate-50 text-xs font-bold outline-none focus:ring-2 ring-blue-500">
                             <option value="">Tất cả trạng thái</option>
                             <option value="Success">Success</option>
                             <option value="Fail">Fail</option>
@@ -91,15 +101,16 @@ const ActionHistory = () => {
                         </select>
                     </div>
                     <div className="col-span-2">
-                        <button onClick={fetchHistory} className="w-full py-2.5 bg-slate-800 text-white rounded-2xl font-black text-[10px] uppercase">Lọc</button>
+                        <button onClick={fetchHistory} className="w-full py-2.5 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">Lọc</button>
                     </div>
                 </div>
             </div>
 
-            <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col overflow-hidden h-auto">
-                <div className="w-full">
+            {/* Bảng dữ liệu Table */}
+            <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col overflow-hidden flex-grow">
+                <div className="overflow-y-auto flex-grow custom-scrollbar">
                     <table className="w-full text-left border-collapse">
-                        <thead className="bg-white border-b">
+                        <thead className="sticky top-0 bg-white border-b z-10">
                             <tr className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
                                 <th className="p-5 px-8">ID</th>
                                 <th className="p-5 px-8">Thiết bị</th>
@@ -117,17 +128,22 @@ const ActionHistory = () => {
                                     return (
                                         <tr key={item.ID} className="hover:bg-blue-50/40 group transition-colors">
                                             <td className="p-4 px-8 text-slate-300 font-mono text-[11px]">#{item.ID}</td>
-                                            <td className="p-4 px-8 text-slate-800">{item.DeviceName}</td>
+                                            <td className="p-4 px-8">
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`w-2 h-2 rounded-full ${item.DeviceID == 1 ? 'bg-yellow-400' : item.DeviceID == 2 ? 'bg-blue-400' : 'bg-cyan-400'}`}></div>
+                                                    <span className="text-slate-800">{item.DeviceName}</span>
+                                                </div>
+                                            </td>
                                             <td className="p-4 text-center">
-                                                <span className={`px-3 py-1 rounded-lg font-black uppercase text-[10px] italic tracking-widest ${item.Action === 'ON' ? 'text-blue-600 bg-blue-50' : 'text-red-500 bg-red-50'}`}>
+                                                <span className={`px-4 py-1.5 rounded-xl font-black uppercase text-[9px] tracking-widest ${item.Action === 'ON' ? 'text-blue-600 bg-blue-50 border border-blue-100' : 'text-red-500 bg-red-50 border border-red-100'}`}>
                                                     {item.Action}
                                                 </span>
                                             </td>
-                                            <td className="p-4 px-8 text-right font-mono text-slate-400 group-hover:text-blue-600 tracking-tighter italic text-[11px]">
-                                                {new Date(item.CreateAt).toLocaleString('vi-VN').replace(',', '')}
+                                            <td className="p-4 px-8 text-right font-mono text-slate-400 group-hover:text-blue-600 tracking-tighter italic text-[11px] transition-colors">
+                                                {formatDateTime(item.CreateAt)}
                                             </td>
                                             <td className="p-4 px-8 text-right">
-                                                <span className={`${statusStyle.color} ${statusStyle.bg} px-2 py-1 rounded-lg text-[9px] font-black uppercase inline-flex items-center gap-1`}>
+                                                <span className={`${statusStyle.color} ${statusStyle.bg} px-3 py-1.5 rounded-xl text-[9px] font-black uppercase inline-flex items-center gap-1.5 border border-current opacity-80`}>
                                                     <i className={`fas ${statusStyle.icon}`}></i>
                                                     {statusStyle.text}
                                                 </span>
@@ -136,19 +152,20 @@ const ActionHistory = () => {
                                     );
                                 })
                             ) : (
-                                <tr><td colSpan="5" className="p-20 text-center text-slate-400 uppercase text-[10px] font-bold">Không có dữ liệu</td></tr>
+                                <tr><td colSpan="5" className="p-20 text-center text-slate-400 uppercase text-[10px] font-bold">Không có dữ liệu lịch sử</td></tr>
                             )}
                         </tbody>
                     </table>
                 </div>
 
-                {/* Gọi Component Pagination và truyền các props cần thiết */}
-                <Pagination
-                    page={pagination.page}
-                    totalPages={pagination.totalPages}
-                    total={pagination.total}
-                    onPageChange={handlePageChange}
-                />
+                <div className="bg-slate-50/50 p-2">
+                    <Pagination
+                        page={pagination.page}
+                        totalPages={pagination.totalPages}
+                        total={pagination.total}
+                        onPageChange={handlePageChange}
+                    />
+                </div>
             </div>
         </main>
     );
