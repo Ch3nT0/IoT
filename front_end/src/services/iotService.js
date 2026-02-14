@@ -46,17 +46,28 @@ export const iotService = {
     },
 
     // 3. Điều khiển thiết bị (Bật/Tắt)
-    controlDevice: async (deviceName, action) => {
+    controlDevice: async (DeviceID, Action) => {
         try {
-            const res = await fetch(`${API_BASE}/api/sensors/control`, {
+            const res = await fetch(`${API_BASE}/api/devices/control`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ deviceName, action })
+                body: JSON.stringify({ DeviceID, Action })
             });
             return res.ok;
         } catch (error) {
             console.error("Error controlling device:", error);
             return false;
+        }
+    },
+
+    getStatusDevices: async () => {
+        try {
+            const res = await fetch(`${API_BASE}/api/devices/status`);
+            if (!res.ok) throw new Error("Lỗi tải trạng thái thiết bị");
+            return await res.json();
+        } catch (error) {
+            console.error("Error in getStatusDevice:", error);
+            throw error;
         }
     }
 };

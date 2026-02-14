@@ -15,7 +15,7 @@ const API_BASE = "http://localhost:3001";
 const Dashboard = () => {
     const [clock, setClock] = useState('--:--:--');
     const [sensors, setSensors] = useState({ temp: 0, humi: 0, light: 0 });
-    const [devices, setDevices] = useState({ light: false, fan: false, ac: false });
+    const [devices, setDevices] = useState({ 1: "OFF", 2: "OFF", 3: "OFF" });
     const [loadingDevice, setLoadingDevice] = useState(null);
     const [chartData, setChartData] = useState({ labels: [], datasets: [] });
     const socketRef = useRef();
@@ -29,7 +29,35 @@ const Dashboard = () => {
             setSensors(data);
             updateChartRealtime(data);
         });
+
+        // 2. Lắng nghe phản hồi từ Hardware hoặc Timeout từ BE
+        socketRef.current.on('device_status_update', (data) => {
+            console.log("Received device status update:", data);
+            const { DeviceID, Status, Action } = data;
+
+            setDevices(prev => {
+                let finalStatus;
+
+                if (Status === 'Success') {
+                    // TH1: Thành công -> Cập nhật theo Action (ON hoặc OFF)
+                    finalStatus = Action;
+                } else {
+                    // TH2: Thất bại (Timeout) -> Quay về trạng thái ngược lại với lệnh vừa bấm
+                    // Nếu định bật (ON) mà lỗi -> quay về OFF. Nếu định tắt (OFF) mà lỗi -> quay về ON.
+                    finalStatus = (Action === 'ON') ? 'OFF' : 'ON';
+                    alert(`Thiết bị ${DeviceID} không phản hồi!`);
+                }
+
+                return {
+                    ...prev,
+                    [DeviceID]: finalStatus
+                };
+            });
+        });
+
+
         fetchInitialData();
+        fetchDeviceStatus();
         return () => { clearInterval(timer); socketRef.current.disconnect(); };
     }, []);
 
@@ -50,7 +78,7 @@ const Dashboard = () => {
 
     const fetchInitialData = async () => {
         try {
-            const result = await iotService.getAllSensors({range: '30days'});
+            const result = await iotService.getAllSensors({ range: '30days' });
             console.log(result);
             const list = result.data || [];
             if (list.length > 0) {
@@ -61,6 +89,16 @@ const Dashboard = () => {
                 setSensors({ temp: latestTemp, humi: latestHumi, light: latestLight });
             }
         } catch (e) { console.error("Failed to load initial data", e); }
+    };
+
+    const fetchDeviceStatus = async () => {
+        try {
+            const status = await iotService.getStatusDevices();
+            console.log("Device status:", status);
+            setDevices(status);
+        } catch (e) {
+            console.error("Lỗi lấy trạng thái thiết bị", e);
+        }
     };
 
     const updateChartRealtime = (data) => {
@@ -78,17 +116,39 @@ const Dashboard = () => {
         });
     };
 
-    const toggleDev = async (dev) => {
-        setLoadingDevice(dev);
-        const action = !devices[dev] ? "ON" : "OFF";
-        const success = await iotService.controlDevice(dev, action);
-        if (success) setDevices(prev => ({ ...prev, [dev]: !prev[dev] }));
-        setLoadingDevice(null);
+    const toggleDev = async (deviceId) => {
+        // 1. Chặn bấm liên tục nếu đang xử lý
+        if (devices[deviceId] === "Processing") return;
+
+        // 2. Xác định hành động tiếp theo dựa trên trạng thái hiện tại
+        const currentStatus = devices[deviceId];
+        const nextAction = currentStatus === "ON" ? "OFF" : "ON";
+
+        // 3. Cập nhật UI sang trạng thái "Processing" ngay lập tức để hiện Spinner
+        setDevices(prev => ({
+            ...prev,
+            [deviceId]: "Processing"
+        }));
+
+        try {
+            const success = await iotService.controlDevice(deviceId, nextAction);
+
+            if (!success) {
+                setDevices(prev => ({
+                    ...prev,
+                    [deviceId]: currentStatus
+                }));
+                alert("Không thể gửi lệnh tới Server!");
+            }
+        } catch (error) {
+            setDevices(prev => ({ ...prev, [deviceId]: currentStatus }));
+            console.error("Lỗi khi điều khiển:", error);
+        }
     };
 
     return (
         <main className="h-screen flex flex-col p-6 overflow-hidden bg-slate-50 gap-4">
-            
+
             {/* Header: Cố định độ cao */}
             <header className="flex justify-between items-center h-12">
                 <div>
@@ -133,32 +193,73 @@ const Dashboard = () => {
 
             {/* Device Buttons: Thu gọn kích thước */}
             <div className="grid grid-cols-3 gap-4 h-32">
-                <DeviceButton name="Light" iconClass="fas fa-lightbulb" active={devices.light} loading={loadingDevice === 'light'} activeClass="text-yellow-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.7)]" onClick={() => toggleDev('light')} />
-                <DeviceButton name="Fan" iconClass="fas fa-fan" active={devices.fan} loading={loadingDevice === 'fan'} activeClass="text-blue-500 animate-spin" onClick={() => toggleDev('fan')} />
-                <DeviceButton name="Air Conditioner" iconClass="fas fa-snowflake" active={devices.ac} loading={loadingDevice === 'ac'} activeClass="text-cyan-400" onClick={() => toggleDev('ac')} />
+                <DeviceButton
+                    name="Đèn"
+                    iconClass="fas fa-lightbulb"
+                    status={devices[1]}
+                    activeClass="text-yellow-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.7)]"
+                    onClick={() => toggleDev(1)}
+                />
+                <DeviceButton
+                    name="Quạt"
+                    iconClass="fas fa-fan"
+                    status={devices[2]}
+                    activeClass="text-blue-500 animate-spin"
+                    onClick={() => toggleDev(2)}
+                />
+                <DeviceButton
+                    name="Điều hòa"
+                    iconClass="fas fa-snowflake"
+                    status={devices[3]}
+                    activeClass="text-cyan-400"
+                    onClick={() => toggleDev(3)}
+                />
             </div>
         </main>
     );
 };
 
-const DeviceButton = ({ name, iconClass, active, loading, activeClass, onClick }) => (
-    <button
-        onClick={onClick}
-        disabled={loading}
-        className={`relative overflow-hidden bg-white p-5 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col items-center justify-center transition-all hover:shadow-md active:scale-95 h-full ${active ? 'bg-slate-50' : ''}`}
-    >
-        {loading && (
-            <div className="absolute inset-0 bg-white/60 flex items-center justify-center z-10">
-                <div className="w-8 h-8 border-2 border-slate-200 border-b-blue-600 rounded-full animate-spin"></div>
+const DeviceButton = ({ name, iconClass, status, activeClass, onClick }) => {
+    const isProcessing = status === "Processing";
+    const isActive = status === "ON";
+
+    return (
+        <button
+            onClick={onClick}
+            disabled={isProcessing}
+            className={`relative overflow-hidden p-6 rounded-[2rem] border-2 transition-all duration-300 flex flex-col items-center justify-center active:scale-95 h-full w-full
+                ${isActive
+                    ? 'bg-blue-600 border-blue-500 shadow-lg shadow-blue-200'
+                    : 'bg-white border-slate-100 shadow-sm text-slate-400 hover:border-blue-200'
+                }
+            `}
+        >
+            {/* 1. Phần Processing: Hiệu ứng mờ nhẹ nhàng nhưng chuyên nghiệp */}
+            {isProcessing && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px] transition-all">
+                    <div className="w-8 h-8 border-2 border-slate-200 border-t-blue-600 rounded-full animate-spin"></div>
+                    <span className="mt-2 text-[9px] font-bold text-blue-600 tracking-tighter">PROCESSING ...</span>
+                </div>
+            )}
+
+            {/* 2. Phần Icon: Trắng hoàn toàn khi ON, Xám khi OFF */}
+            <div className={`transition-transform duration-500 ${isActive ? 'scale-110' : ''}`}>
+                <i className={`${iconClass} text-4xl ${isActive ? 'text-white' : 'text-slate-200'}`}></i>
             </div>
-        )}
-        
-        <i className={`${iconClass} text-4xl transition-all duration-500 ${active ? activeClass : 'text-slate-200'}`}></i>
-        
-        <h4 className={`mt-3 font-extrabold uppercase tracking-widest text-xs transition-colors duration-500 ${active ? 'text-slate-800' : 'text-slate-400'}`}>
-            {name}
-        </h4>
-    </button>
-);
+
+            {/* 3. Tên thiết bị: Trắng khi ON để nổi bật trên nền xanh */}
+            <h4 className={`mt-3 font-black uppercase tracking-widest text-[10px] transition-colors duration-300 
+                ${isActive ? 'text-white' : 'text-slate-400'}`}>
+                {name}
+            </h4>
+
+            {/* 4. Badge trạng thái nhỏ: Giúp nhận diện cực nhanh */}
+            <div className={`mt-2 px-3 py-0.5 rounded-full text-[8px] font-bold transition-all
+                ${isActive ? 'bg-blue-400 text-white' : 'bg-slate-100 text-slate-300'}`}>
+                {isActive ? 'ON' : 'OFF'}
+            </div>
+        </button>
+    );
+};
 
 export default Dashboard;
