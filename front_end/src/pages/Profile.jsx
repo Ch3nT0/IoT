@@ -12,7 +12,7 @@ const Profile = () => {
     {
       name: 'API Doc',
       iconClass: 'fas fa-code',
-      url: '#',
+      url: 'http://localhost:3001/api-docs',
       hoverClass: 'hover:bg-blue-600 hover:border-blue-500',
       iconColor: 'text-blue-600'
     },
@@ -26,7 +26,7 @@ const Profile = () => {
     {
       name: 'Báo cáo',
       iconClass: 'fas fa-file-pdf',
-      url: '#',
+      url: 'https://docs.google.com/document/d/1MZ06vs_XDlT54wui9Uk6ZgAhx_Jf-ZD_8DfNOvmcE5Q/edit?tab=t.0',
       hoverClass: 'hover:bg-red-600 hover:border-red-500',
       iconColor: 'text-red-600'
     }

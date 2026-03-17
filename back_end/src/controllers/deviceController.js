@@ -176,7 +176,7 @@ exports.controlDevice = async (req, res) => {
                 console.log(`[TIMEOUT] HistoryID ${historyId} đánh dấu Fail.`);
             }
             delete timers[historyId]; // Xóa khỏi bộ nhớ
-        }, 120000);
+        }, 15000);
 
         res.status(200).json({
             message: "Lệnh đã được gửi, đang chờ phản hồi...",

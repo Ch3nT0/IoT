@@ -82,13 +82,38 @@ mqttClient.on('message', async (topic, message) => {
 
         // 3. Xử lý đồng bộ khi Hardware khởi động lại (Topic: device/init)
         else if (topic === 'device/init') {
-            const { DeviceID, Action, Status } = data;
-            await db.query(
-                "INSERT INTO ActionHistory (DeviceID, Action, Status, CreateAt) VALUES (?, ?, ?, NOW())",
-                [DeviceID, Action, Status]
-            );
-            io.emit('device_status_update', { DeviceID, Status, Action });
-            console.log(`[INIT] Device ${DeviceID} is ${Action}`);
+            console.log("[INIT] Hardware yêu cầu đồng bộ. Đang truy vấn trạng thái thành công gần nhất...");
+            
+            try {
+                // Query lấy Action (ON/OFF) của bản ghi Success gần nhất cho từng DeviceID
+                const query = `
+                    SELECT t1.DeviceID, t1.Action 
+                    FROM ActionHistory t1
+                    INNER JOIN (
+                        SELECT DeviceID, MAX(CreateAt) as MaxTime
+                        FROM ActionHistory
+                        WHERE Status = 'Success'
+                        GROUP BY DeviceID
+                    ) t2 ON t1.DeviceID = t2.DeviceID AND t1.CreateAt = t2.MaxTime
+                `;
+
+                const [rows] = await db.query(query);
+
+                if (rows.length > 0) {
+                    rows.forEach(device => {
+                        const syncData = JSON.stringify({
+                            DeviceID: device.DeviceID,
+                            Status: device.Action // Lấy giá trị ON/OFF từ cột Action gửi vào key Status cho HW hiểu
+                        });
+                        mqttClient.publish('device/sync', syncData);
+                        console.log(`[SYNC] Khôi phục Device ${device.DeviceID} về trạng thái: ${device.Action}`);
+                    });
+                } else {
+                    console.log("[SYNC] Không tìm thấy dữ liệu Success trong DB.");
+                }
+            } catch (err) {
+                console.error("Lỗi đồng bộ:", err);
+            }
         }
 
     } catch (err) {
