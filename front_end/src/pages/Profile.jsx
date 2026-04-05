@@ -49,7 +49,7 @@ const Profile = () => {
         {/* Info Section */}
         <h2 className="text-3xl font-extrabold text-slate-800 mb-2 tracking-tight">Lê Doãn Mạnh</h2>
         <p className="text-blue-600 font-bold mb-12 uppercase tracking-[0.2em] text-[10px] bg-blue-50 inline-block px-4 py-1 rounded-full">
-          Cloud / BackEnd Developer
+          Devops/Cloud Engineer
         </p>
         
         {/* Links Grid */}

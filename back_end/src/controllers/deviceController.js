@@ -153,7 +153,7 @@ exports.controlDevice = async (req, res) => {
         const payload = JSON.stringify({ DeviceID, Action });
         mqttClient.publish(topic, payload, { qos: 1 });
 
-        // 3. THIẾT LẬP TIMEOUT 2 PHÚT (120.000 ms)
+        // 3. THIẾT LẬP TIMEOUT 5s
         timers[historyId] = setTimeout(async () => {
             // Kiểm tra lại xem bản ghi vẫn là Processing thì mới đánh Fail
             const [check] = await db.query(
@@ -176,7 +176,7 @@ exports.controlDevice = async (req, res) => {
                 console.log(`[TIMEOUT] HistoryID ${historyId} đánh dấu Fail.`);
             }
             delete timers[historyId]; // Xóa khỏi bộ nhớ
-        }, 15000);
+        }, 5000);
 
         res.status(200).json({
             message: "Lệnh đã được gửi, đang chờ phản hồi...",

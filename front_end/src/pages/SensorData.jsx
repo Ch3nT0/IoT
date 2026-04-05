@@ -122,29 +122,41 @@ const SensorData = () => {
                                 <th className="p-5 px-8 text-right">Thời gian ghi nhận</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50 text-[13px] font-bold text-slate-600">
+                        <tbody className="divide-y divide-slate-50 text-[14px] font-medium text-slate-600">
                             {loading ? (
                                 <tr><td colSpan="4" className="p-20 text-center"><i className="fas fa-spinner animate-spin text-blue-600 text-2xl"></i></td></tr>
                             ) : data.length > 0 ? (
                                 data.map((item) => {
                                     const meta = getMeta(item.SensorName);
                                     return (
-                                        <tr key={item.ID} className="hover:bg-blue-50/40 group transition-colors">
-                                            <td className="p-4 px-8 text-slate-300 font-mono text-[11px]">#{item.ID}</td>
-                                            <td className="p-4 px-8 text-slate-800 flex items-center gap-2">
-                                                <i className={`fas ${meta.icon} opacity-20 text-xs`}></i> {item.SensorName}
+                                        <tr key={item.ID} className="hover:bg-blue-50/40 group transition-all duration-200">
+                                            {/* ID: To hơn, màu xanh Indigo chuyên nghiệp */}
+                                            <td className="p-5 px-8 font-bold text-indigo-500/80 text-sm">
+                                                #{item.ID}
                                             </td>
-                                            <td className={`p-4 text-center text-lg font-black ${meta.color}`}>
-                                                {item.Value} <span className="text-slate-300 font-normal text-xs">{meta.unit}</span>
+
+                                            {/* Tên Cảm biến: Giữ nguyên logic cũ nhưng padding thoáng hơn */}
+                                            <td className="p-5 px-8 text-slate-700 font-bold flex items-center gap-3">
+                                                <div className={`w-7 h-7 rounded-lg flex items-center justify-center bg-slate-50 group-hover:bg-white transition-colors`}>
+                                                    <i className={`fas ${meta.icon} opacity-40 text-xs ${meta.color}`}></i>
+                                                </div>
+                                                {item.SensorName}
                                             </td>
-                                            <td className="p-4 px-8 text-right font-mono text-slate-400 group-hover:text-blue-600 tracking-tighter italic text-[11px]">
+
+                                            {/* Giá trị đo: Giữ nguyên font Black làm điểm nhấn */}
+                                            <td className={`p-5 text-center text-xl font-black ${meta.color}`}>
+                                                {item.Value} <span className="text-slate-400 font-bold text-xs ml-0.5">{meta.unit}</span>
+                                            </td>
+
+                                            {/* Thời gian: To hơn, màu Slate-600 dễ nhìn, Hover nổi bật */}
+                                            <td className="p-5 px-8 text-right font-semibold text-slate-600 group-hover:text-blue-700 transition-colors text-sm tracking-tight">
                                                 {formatDateTime(item.CreateAt)}
                                             </td>
                                         </tr>
                                     );
                                 })
                             ) : (
-                                <tr><td colSpan="4" className="p-20 text-center text-slate-400 uppercase text-[10px] font-bold">Không có dữ liệu</td></tr>
+                                <tr><td colSpan="4" className="p-20 text-center text-slate-400 uppercase text-[10px] font-bold tracking-widest">Không có dữ liệu phù hợp</td></tr>
                             )}
                         </tbody>
                     </table>

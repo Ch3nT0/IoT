@@ -6,7 +6,7 @@ const ActionHistory = () => {
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(false);
     const [filters, setFilters] = useState({ searchTime: '', device: '', status: '' });
-    const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
+    const [pagination, setPagination] = useState({ page: 1, limit: 9, total: 0, totalPages: 0 });
 
     useEffect(() => {
         fetchHistory();
@@ -119,32 +119,43 @@ const ActionHistory = () => {
                                 <th className="p-5 px-8 text-right">Trạng thái</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50 text-[13px] font-bold text-slate-600">
+                        <tbody className="divide-y divide-slate-50 text-[14px] font-medium text-slate-600">
                             {loading ? (
                                 <tr><td colSpan="5" className="p-20 text-center"><i className="fas fa-spinner animate-spin text-blue-600 text-2xl"></i></td></tr>
                             ) : history.length > 0 ? (
                                 history.map((item) => {
                                     const statusStyle = getStatusStyle(item.Status);
                                     return (
-                                        <tr key={item.ID} className="hover:bg-blue-50/40 group transition-colors">
-                                            <td className="p-4 px-8 text-slate-300 font-mono text-[11px]">#{item.ID}</td>
-                                            <td className="p-4 px-8">
-                                                <div className="flex items-center gap-2">
-                                                    <div className={`w-2 h-2 rounded-full ${item.DeviceID == 1 ? 'bg-yellow-400' : item.DeviceID == 2 ? 'bg-blue-400' : 'bg-cyan-400'}`}></div>
-                                                    <span className="text-slate-800">{item.DeviceName}</span>
+                                        <tr key={item.ID} className="hover:bg-blue-50/40 group transition-all duration-200">
+                                            {/* ID: To hơn, màu Indigo đậm rõ nét */}
+                                            <td className="p-5 px-8 font-bold text-indigo-500/80 text-sm">
+                                                #{item.ID}
+                                            </td>
+
+                                            {/* Thiết bị: Chữ Slate-800 đậm đà */}
+                                            <td className="p-5 px-8">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-2.5 h-2.5 rounded-full shadow-sm ${item.DeviceID == 1 ? 'bg-yellow-400' : item.DeviceID == 2 ? 'bg-blue-400' : 'bg-cyan-400'}`}></div>
+                                                    <span className="text-slate-800 font-bold">{item.DeviceName}</span>
                                                 </div>
                                             </td>
-                                            <td className="p-4 text-center">
-                                                <span className={`px-4 py-1.5 rounded-xl font-black uppercase text-[9px] tracking-widest ${item.Action === 'ON' ? 'text-blue-600 bg-blue-50 border border-blue-100' : 'text-red-500 bg-red-50 border border-red-100'}`}>
+
+                                            {/* Hành động: Label ON/OFF */}
+                                            <td className="p-5 text-center">
+                                                <span className={`px-4 py-1.5 rounded-xl font-black uppercase text-[10px] tracking-widest border ${item.Action === 'ON' ? 'text-blue-600 bg-blue-50 border-blue-100' : 'text-red-500 bg-red-50 border-red-100'}`}>
                                                     {item.Action}
                                                 </span>
                                             </td>
-                                            <td className="p-4 px-8 text-right font-mono text-slate-400 group-hover:text-blue-600 tracking-tighter italic text-[11px] transition-colors">
+
+                                            {/* Thời gian: To hơn (text-sm), không nghiêng, màu Slate-600 dễ đọc */}
+                                            <td className="p-5 px-8 text-right font-semibold text-slate-600 group-hover:text-blue-700 transition-colors text-sm tracking-tight">
                                                 {formatDateTime(item.CreateAt)}
                                             </td>
-                                            <td className="p-4 px-8 text-right">
-                                                <span className={`${statusStyle.color} ${statusStyle.bg} px-3 py-1.5 rounded-xl text-[9px] font-black uppercase inline-flex items-center gap-1.5 border border-current opacity-80`}>
-                                                    <i className={`fas ${statusStyle.icon}`}></i>
+
+                                            {/* Trạng thái: Label Status */}
+                                            <td className="p-5 px-8 text-right">
+                                                <span className={`${statusStyle.color} ${statusStyle.bg} px-3 py-1.5 rounded-xl text-[10px] font-black uppercase inline-flex items-center gap-1.5 border border-current shadow-sm`}>
+                                                    <i className={`fas ${statusStyle.icon} text-[9px]`}></i>
                                                     {statusStyle.text}
                                                 </span>
                                             </td>
@@ -152,7 +163,7 @@ const ActionHistory = () => {
                                     );
                                 })
                             ) : (
-                                <tr><td colSpan="5" className="p-20 text-center text-slate-400 uppercase text-[10px] font-bold">Không có dữ liệu lịch sử</td></tr>
+                                <tr><td colSpan="5" className="p-20 text-center text-slate-400 uppercase text-[10px] font-bold tracking-widest">Không có dữ liệu lịch sử</td></tr>
                             )}
                         </tbody>
                     </table>
